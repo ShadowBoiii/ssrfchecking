@@ -7,10 +7,15 @@ from dotenv import load_dotenv
 
 public_app = Flask(__name__)
 admin_app = Flask(__name__)
+load_dotenv()
 
 if not os.path.exists('.env') and os.path.exists('.env.example'):
     with open('.env.example', 'r') as example, open('.env', 'w') as real:
         real.write(example.read())
+
+# =======================
+# Public App Routes
+# =======================
 
 @public_app.route('/')
 def index():
@@ -68,25 +73,32 @@ def twitter_card_checker():
     except Exception as e:
         return jsonify({"error": "An error occurred", "details": str(e)}), 500
 
-# @admin_app.route('/')
-# def admin_index():
-#      return "Admin portal under construction; routes implemented: /flag"
-
-# @admin_app.route('/flag')
-# def flag():
-#     return os.getenv("FLAG")
-
-# def run_admin():
-#     admin_app.run(host='127.0.0.1', port=5001)
-
-
+# /flag on PUBLIC app calls internal /flag on ADMIN app
 @public_app.route('/flag')
+def proxy_flag():
+    try:
+        internal_response = requests.get("http://127.0.0.1:5001/flag", timeout=2)
+        return internal_response.text, internal_response.status_code
+    except Exception as e:
+        return jsonify({"error": "Could not reach internal service"}), 500
+
+
+# =======================
+# Admin App Routes (local only)
+# =======================
+
+@admin_app.route('/flag')
 def flag():
-    if request.remote_addr not in ("127.0.0.1", "::1"):
-        return jsonify({"error": "Forbidden"}), 403
-    return os.getenv("FLAG")
+    return os.getenv("FLAG") or "CTF{dummy_flag_for_testing}"
+
+
+# =======================
+# Run both apps
+# =======================
+
+def run_admin():
+    admin_app.run(host='127.0.0.1', port=5001)
 
 if __name__ == '__main__':
-    load_dotenv()
-    # threading.Thread(target=run_admin, daemon=True).start()
+    threading.Thread(target=run_admin, daemon=True).start()
     public_app.run(host='0.0.0.0', port=5000)
