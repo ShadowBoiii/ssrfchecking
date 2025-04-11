@@ -73,13 +73,16 @@ def twitter_card_checker():
     except Exception as e:
         return jsonify({"error": "An error occurred", "details": str(e)}), 500
 
-# /flag on PUBLIC app calls internal /flag on ADMIN app
 @public_app.route('/flag')
 def proxy_flag():
+    # Only allow localhost requests
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        return jsonify({"error": "Forbidden"}), 403
+
     try:
         internal_response = requests.get("http://127.0.0.1:5001/flag", timeout=2)
         return internal_response.text, internal_response.status_code
-    except Exception as e:
+    except Exception:
         return jsonify({"error": "Could not reach internal service"}), 500
 
 
