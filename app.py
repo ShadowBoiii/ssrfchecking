@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import os
+import socket
 
 load_dotenv()
 
@@ -70,9 +71,18 @@ def twitter_card_checker():
 
 @app.route('/flag')
 def flag():
-    if not request.remote_addr.startswith("127.") and not request.remote_addr == "::1":
-        return jsonify({"error": "Forbidden"}), 403
-    return os.getenv("FLAG")
+    try:
+        # Get the IP of the host machine (container or local)
+        hostname = socket.gethostname()
+        local_ips = socket.gethostbyname_ex(hostname)[2]
+
+        if request.remote_addr not in local_ips and not request.remote_addr.startswith("127.") and request.remote_addr != "::1":
+            return jsonify({"error": "Forbidden"}), 403
+
+        return os.getenv("FLAG")
+
+    except Exception as e:
+        return jsonify({"error": "Error checking local access", "details": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
