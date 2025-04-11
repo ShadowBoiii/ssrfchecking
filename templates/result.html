@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter Card Preview</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Twitter Card Preview</h1>
+
+        {% if card_data.title %}
+            <div class="card-preview">
+                {% if card_data.image %}
+                    <div class="card-image" style="background-image: url('{{ card_data.image }}'); background-size: cover; background-position: center;"></div>
+                {% endif %}
+                <div class="card-content">
+                    <h2>{{ card_data.title }}</h2>
+                    <p>{{ card_data.description }}</p>
+                </div>
+            </div>
+        {% else %}
+            <div class="card-preview">
+                <div class="card-content">
+                    <h2>No Preview Available</h2>
+                    <p>No Twitter Card data found for this URL.</p>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="preview-form" style="margin-top: 2rem;">
+            <form action="/get" method="POST">
+                <div class="input-group">
+                    <input type="hidden" name="url" value="{{ request.form.get('url') }}">
+                    <input type="hidden" name="view_html" value="true">
+                    <button type="submit">View HTML Source Code</button>
+                </div>
+            </form>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="{{ url_for('index') }}" style="color: var(--twitter-blue); text-decoration: none; font-weight: 600;">← Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>
