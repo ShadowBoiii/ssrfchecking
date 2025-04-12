@@ -1,23 +1,22 @@
-from flask import Flask, request, render_template, jsonify
 import requests
-from bs4 import BeautifulSoup
-from dotenv import load_dotenv
+import threading
 import os
-import socket
+from bs4 import BeautifulSoup
+from flask import Flask, request, render_template, jsonify
+from dotenv import load_dotenv
 
-load_dotenv()
-
-app = Flask(__name__)
+public_app = Flask(__name__)
+admin_app = Flask(__name__)
 
 if not os.path.exists('.env') and os.path.exists('.env.example'):
     with open('.env.example', 'r') as example, open('.env', 'w') as real:
         real.write(example.read())
 
-@app.route('/')
+@public_app.route('/')
 def index():
     return render_template("index.html")
 
-@app.route('/get', methods=['POST'])
+@public_app.route('/get', methods=['POST'])
 def twitter_card_checker():
     url = request.form.get("url")
     view_html = request.form.get("view_html")
@@ -69,20 +68,21 @@ def twitter_card_checker():
     except Exception as e:
         return jsonify({"error": "An error occurred", "details": str(e)}), 500
 
-@app.route('/flag')
+
+@public_app.route('/flag')
 def flag():
-    try:
-        # Get the IP of the host machine (container or local)
-        hostname = socket.gethostname()
-        local_ips = socket.gethostbyname_ex(hostname)[2]
+    # Only allow internal SSRF requests
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        return jsonify({"error": "Forbidden"}), 403
 
-        if request.remote_addr not in local_ips and not request.remote_addr.startswith("127.") and request.remote_addr != "::1":
-            return jsonify({"error": "Forbidden"}), 403
+    user_agent = request.headers.get("User-Agent", "")
+    if "requests" not in user_agent.lower():
+        return jsonify({"error": "Looks sus"}), 403
 
-        return os.getenv("FLAG")
+    return os.getenv("FLAG")
 
-    except Exception as e:
-        return jsonify({"error": "Error checking local access", "details": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    load_dotenv()
+    # threading.Thread(target=run_admin, daemon=True).start()
+    public_app.run(host='0.0.0.0', port=5000)
